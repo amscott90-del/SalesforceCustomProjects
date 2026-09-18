@@ -1,0 +1,116 @@
+.table-wrap {
+    overflow-x: auto;
+}
+.deleted-row {
+    opacity: 0.5;
+    text-decoration: line-through;
+}
+.slds-align-bottom {
+    display: flex;
+    align-items: end;
+}
+
+
+/* Native date inputs keep the browser calendar UI out of the Lightning
+   popup/scroll-container behavior that can clip the date picker in Flow. */
+.native-date-input {
+    box-sizing: border-box;
+    width: 10.75rem;
+    min-height: 2rem;
+    padding: 0 0.5rem;
+    border: 1px solid #c9c9c9;
+    border-radius: 0.25rem;
+    background: #ffffff;
+    font: inherit;
+}
+
+.native-date-input:focus {
+    outline: 2px solid #0176d3;
+    outline-offset: 1px;
+}
+
+.native-date-input:disabled {
+    background: #f3f3f3;
+    cursor: not-allowed;
+}
+
+.product-table-wrap {
+    max-height: 24rem;
+    overflow-y: auto;
+}
+
+.sort-modal-container {
+    width: 90%;
+    max-width: 86rem;
+}
+.sort-modal-content {
+    max-height: 32rem;
+    overflow: auto;
+}
+.sort-row {
+    cursor: grab;
+}
+.sort-row:active {
+    cursor: grabbing;
+}
+.drag-col {
+    width: 9rem;
+}
+
+
+.line-number-col {
+    width: 4rem;
+    white-space: nowrap;
+}
+
+.totals-panel {
+    margin-left: auto;
+    max-width: 28rem;
+    border-top: 1px solid #c9c9c9;
+    padding-top: 0.75rem;
+}
+
+.total-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 2rem;
+    padding: 0.25rem 0;
+}
+
+.group-total-row {
+    color: #444;
+}
+
+.grand-total-row {
+    border-top: 2px solid #181818;
+    margin-top: 0.5rem;
+    padding-top: 0.65rem;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+
+/* Native group select prevents the Lightning combobox menu from being
+   clipped by .table-wrap when the control is on one of the last rows.
+   Native select option popups are rendered by the browser outside the
+   scroll container. */
+.native-group-select {
+    box-sizing: border-box;
+    width: 8.5rem;
+    min-height: 2rem;
+    padding: 0 2rem 0 0.75rem;
+    border: 1px solid #c9c9c9;
+    border-radius: 0.25rem;
+    background: #ffffff;
+    font: inherit;
+}
+
+.native-group-select:focus {
+    outline: 2px solid #0176d3;
+    outline-offset: 1px;
+}
+
+.native-group-select:disabled {
+    background: #f3f3f3;
+    cursor: not-allowed;
+}

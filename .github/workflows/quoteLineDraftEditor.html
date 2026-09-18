@@ -1,0 +1,395 @@
+<template>
+    <lightning-card title={title} icon-name="standard:quotes">
+        <template if:true={isBusy}>
+            <lightning-spinner alternative-text="Working"></lightning-spinner>
+        </template>
+
+        <div class="slds-p-horizontal_medium slds-p-bottom_small">
+            <lightning-button
+                label="Add Product"
+                variant="brand-outline"
+                onclick={openProductPicker}>
+            </lightning-button>
+            <lightning-button
+                class="slds-m-left_small"
+                label="Sort Lines"
+                icon-name="utility:sort"
+                onclick={openSortModal}>
+            </lightning-button>
+            <lightning-button
+                class="slds-m-left_small"
+                label="Reload"
+                icon-name="utility:refresh"
+                onclick={handleReload}>
+            </lightning-button>
+            <lightning-button
+                class="slds-m-left_small"
+                label="Save Lines"
+                variant="brand"
+                onclick={handleSave}>
+            </lightning-button>
+            <lightning-button
+                class="slds-m-left_small"
+                label="Reprice All"
+                variant="brand-outline"
+                onclick={handleReprice}>
+            </lightning-button>
+        </div>
+        <div class="slds-box slds-m-horizontal_medium slds-m-bottom_medium">
+            <div class="slds-text-heading_small slds-m-bottom_small">Quote Groups</div>
+            <div class="slds-grid slds-wrap slds-gutters_small">
+                <div class="slds-col slds-size_4-of-12"><lightning-input label="New Group Name" value={newGroupName} onchange={handleNewGroupName}></lightning-input></div>
+                <div class="slds-col slds-size_2-of-12 slds-align_absolute-center"><lightning-button label="Add Group" variant="brand-outline" onclick={handleCreateGroup}></lightning-button></div>
+                <div class="slds-col slds-size_6-of-12"><lightning-combobox label="Edit Existing Group" value={selectedGroupId} options={groupOptions} onchange={handleSelectedGroup}></lightning-combobox></div>
+                <template if:true={selectedGroupId}>
+                    <div class="slds-col slds-size_3-of-12"><lightning-input label="Group Name" value={renameGroupName} onchange={handleRenameGroupName}></lightning-input></div>
+                    <div class="slds-col slds-size_2-of-12"><lightning-input type="date" label="Start Date" value={groupStartDate} onchange={handleGroupStartDate}></lightning-input></div>
+                    <div class="slds-col slds-size_2-of-12"><lightning-input type="date" label="End Date" value={groupEndDate} onchange={handleGroupEndDate}></lightning-input></div>
+                    <div class="slds-col slds-size_4-of-12"><lightning-input label="Description" value={groupDescription} onchange={handleGroupDescription}></lightning-input></div>
+                    <div class="slds-col slds-size_1-of-12 slds-align_absolute-center"><lightning-button label="Save Group" variant="brand-outline" onclick={handleRenameGroup}></lightning-button></div>
+                </template>
+            </div>
+        </div>
+
+        <template if:true={hasRows}>
+            <div class="table-wrap">
+                <table class="slds-table slds-table_cell-buffer slds-table_bordered">
+                    <thead>
+                        <tr class="slds-line-height_reset">
+                            <th class="line-number-col">Line</th>
+                            <th>Product</th>
+                            <th>Code</th>
+                            <th>List Price</th>
+                            <th>Group</th>
+                            <th>Quantity</th>
+                            <template if:true={showUnitPrice}>
+                                <th>Unit Price</th>
+                            </template>
+                            <th>Override Price</th>
+                            <th>Total Price Override</th>
+                            <th>Term in Months</th>
+                            <th>Term Unit Price</th>
+                            <th>Total Price</th>
+                            <th>Start Date</th>
+                            <th>End Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template for:each={rows} for:item="row">
+                            <tr key={row.key} class={row.deleteRowClass}>
+                                <td class="line-number-col slds-text-align_center">{row.lineNumber}</td>
+                                <td>{row.productName}</td>
+                                <td>{row.productCode}</td>
+                                <td>
+                                    <lightning-formatted-number
+                                        value={row.listPrice}
+                                        format-style="currency"
+                                        currency-code={currencyIsoCode}
+                                        minimum-fraction-digits="2"
+                                        maximum-fraction-digits="2">
+                                    </lightning-formatted-number>
+                                </td>
+                                <td>
+                                    <!-- Native select intentionally used here instead of lightning-combobox.
+                                         The browser renders the option popup outside the table's horizontal
+                                         scroll container, so lines near the bottom are not clipped and users
+                                         do not have to scroll the editor just to choose a group. -->
+                                    <select
+                                        class="native-group-select"
+                                        aria-label="Quote Line Group"
+                                        data-key={row.key}
+                                        value={row.groupId}
+                                        disabled={row.deleteRow}
+                                        onchange={handleLineGroupChange}>
+                                        <template for:each={groupOptions} for:item="groupOption">
+                                            <option key={groupOption.value} value={groupOption.value}>{groupOption.label}</option>
+                                        </template>
+                                    </select>
+                                </td>
+                                <td>
+                                    <lightning-input
+                                        type="number"
+                                        variant="label-hidden"
+                                        min="0.000001"
+                                        step="any"
+                                        data-key={row.key}
+                                        data-field="quantity"
+                                        value={row.quantity}
+                                        disabled={row.deleteRow}
+                                        onchange={handleInput}>
+                                    </lightning-input>
+                                </td>
+                                <template if:true={showUnitPrice}>
+                                    <td>
+                                        <lightning-input
+                                            type="number"
+                                            variant="label-hidden"
+                                            step="0.01"
+                                            data-key={row.key}
+                                            data-field="unitPrice"
+                                            value={row.unitPrice}
+                                            disabled={row.deleteRow}
+                                            onchange={handleInput}>
+                                        </lightning-input>
+                                    </td>
+                                </template>
+                                <td>
+                                    <lightning-input
+                                        type="number"
+                                        variant="label-hidden"
+                                        step="0.01"
+                                        data-key={row.key}
+                                        data-field="overridePrice"
+                                        value={row.overridePrice}
+                                        disabled={row.deleteRow}
+                                        onchange={handleInput}>
+                                    </lightning-input>
+                                </td>
+                                <td>
+                                    <lightning-input
+                                        type="number"
+                                        variant="label-hidden"
+                                        step="0.01"
+                                        data-key={row.key}
+                                        data-field="totalOverride"
+                                        value={row.totalOverride}
+                                        disabled={row.deleteRow}
+                                        onchange={handleInput}>
+                                    </lightning-input>
+                                </td>
+                                <td>
+                                    <lightning-formatted-number
+                                        value={row.termInMonths}
+                                        maximum-fraction-digits="2">
+                                    </lightning-formatted-number>
+                                </td>
+                                <td>
+                                    <lightning-formatted-number
+                                        value={row.termUnitPrice}
+                                        format-style="currency"
+                                        currency-code={currencyIsoCode}
+                                        minimum-fraction-digits="2"
+                                        maximum-fraction-digits="4">
+                                    </lightning-formatted-number>
+                                </td>
+                                <td>
+                                    <lightning-formatted-number
+                                        value={row.totalPrice}
+                                        format-style="currency"
+                                        currency-code={currencyIsoCode}
+                                        minimum-fraction-digits="2"
+                                        maximum-fraction-digits="2">
+                                    </lightning-formatted-number>
+                                </td>
+                                <td>
+                                    <input
+                                        class="native-date-input"
+                                        type="date"
+                                        aria-label="Start Date"
+                                        data-key={row.key}
+                                        data-field="startDate"
+                                        value={row.startDate}
+                                        disabled={row.deleteRow}
+                                        onchange={handleInput} />
+                                </td>
+                                <td>
+                                    <input
+                                        class="native-date-input"
+                                        type="date"
+                                        aria-label="End Date"
+                                        data-key={row.key}
+                                        data-field="endDate"
+                                        value={row.endDate}
+                                        disabled={row.deleteRow}
+                                        onchange={handleInput} />
+                                </td>
+                                <td>
+                                    <template if:false={row.deleteRow}>
+                                        <lightning-button-icon
+                                            icon-name="utility:copy"
+                                            alternative-text="Duplicate"
+                                            title="Duplicate"
+                                            data-key={row.key}
+                                            onclick={handleDuplicate}>
+                                        </lightning-button-icon>
+                                        <lightning-button-icon
+                                            class="slds-m-left_x-small"
+                                            icon-name="utility:delete"
+                                            alternative-text="Delete"
+                                            title="Delete"
+                                            data-key={row.key}
+                                            onclick={handleDelete}>
+                                        </lightning-button-icon>
+                                    </template>
+                                    <template if:true={row.deleteRow}>
+                                        <lightning-button
+                                            label="Undo"
+                                            data-key={row.key}
+                                            onclick={handleUndoDelete}>
+                                        </lightning-button>
+                                    </template>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="totals-panel slds-m-horizontal_medium slds-m-top_medium slds-m-bottom_medium">
+                <template if:true={hasGroups}>
+                    <div class="slds-text-title_bold slds-m-bottom_x-small">Group Totals</div>
+                    <template for:each={groupTotals} for:item="groupTotal">
+                        <div key={groupTotal.key} class="total-row group-total-row">
+                            <span>{groupTotal.name} Total</span>
+                            <lightning-formatted-number
+                                value={groupTotal.total}
+                                format-style="currency"
+                                currency-code={currencyIsoCode}
+                                minimum-fraction-digits="2"
+                                maximum-fraction-digits="2">
+                            </lightning-formatted-number>
+                        </div>
+                    </template>
+                </template>
+                <div class="total-row grand-total-row">
+                    <span>Grand Total</span>
+                    <lightning-formatted-number
+                        value={grandTotal}
+                        format-style="currency"
+                        currency-code={currencyIsoCode}
+                        minimum-fraction-digits="2"
+                        maximum-fraction-digits="2">
+                    </lightning-formatted-number>
+                </div>
+            </div>
+        </template>
+
+        <template if:false={hasRows}>
+            <div class="slds-p-around_medium slds-text-color_weak">
+                No quote lines yet. Click Add Product to create draft lines without leaving the screen.
+            </div>
+        </template>
+    </lightning-card>
+
+    <template if:true={showSortModal}>
+        <section role="dialog" tabindex="-1" aria-modal="true" aria-labelledby="sort-lines-heading" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container sort-modal-container">
+                <header class="slds-modal__header">
+                    <h2 id="sort-lines-heading" class="slds-text-heading_medium">Sort Quote Lines</h2>
+                    <p class="slds-m-top_x-small slds-text-color_weak">Drag rows into the order you want. Arrow buttons are included as a keyboard-friendly fallback.</p>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium sort-modal-content">
+                    <table class="slds-table slds-table_cell-buffer slds-table_bordered slds-table_fixed-layout">
+                        <thead><tr><th class="drag-col">Order</th><th class="line-number-col">Line</th><th>Code</th><th>Product</th><th>Group</th><th>Quantity</th><th>Start Date</th><th>End Date</th><th>Total Price</th></tr></thead>
+                        <tbody>
+                            <template for:each={sortRows} for:item="row" for:index="index">
+                                <tr key={row.id} class="sort-row" draggable="true" data-index={index} ondragstart={handleSortDragStart} ondragover={handleSortDragOver} ondrop={handleSortDrop}>
+                                    <td class="drag-col">
+                                        <lightning-icon icon-name="utility:drag_and_drop" size="x-small" alternative-text="Drag"></lightning-icon>
+                                        <lightning-button-icon class="slds-m-left_x-small" icon-name="utility:up" size="small" alternative-text="Move up" title="Move up" data-index={index} data-direction="up" onclick={moveSortRow}></lightning-button-icon>
+                                        <lightning-button-icon icon-name="utility:down" size="small" alternative-text="Move down" title="Move down" data-index={index} data-direction="down" onclick={moveSortRow}></lightning-button-icon>
+                                    </td>
+                                    <td class="line-number-col slds-text-align_center">{row.lineNumber}</td>
+                                    <td>{row.productCode}</td><td title={row.productName}>{row.productName}</td><td>{row.groupName}</td>
+                                    <td><lightning-formatted-number value={row.quantity} maximum-fraction-digits="2"></lightning-formatted-number></td>
+                                    <td>{row.startDate}</td><td>{row.endDate}</td>
+                                    <td><lightning-formatted-number value={row.totalPrice} format-style="currency" currency-code={currencyIsoCode} minimum-fraction-digits="2" maximum-fraction-digits="2"></lightning-formatted-number></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+                <footer class="slds-modal__footer">
+                    <lightning-button label="Cancel" onclick={closeSortModal}></lightning-button>
+                    <lightning-button class="slds-m-left_small" variant="brand" label="Save Order" onclick={handleSaveSortOrder}></lightning-button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+
+    <template if:true={showProductPicker}>
+        <section
+            role="dialog"
+            tabindex="-1"
+            aria-modal="true"
+            aria-labelledby="product-picker-heading"
+            class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <h2 id="product-picker-heading" class="slds-text-heading_medium">Add Products</h2>
+                </header>
+
+                <div class="slds-modal__content slds-p-around_medium">
+                    <div class="slds-grid slds-gutters slds-m-bottom_small">
+                        <div class="slds-col">
+                            <lightning-input
+                                type="search"
+                                label="Search products"
+                                value={searchTerm}
+                                onchange={handleSearchChange}>
+                            </lightning-input>
+                        </div>
+                        <div class="slds-col slds-grow-none slds-align-bottom">
+                            <lightning-button label="Search" onclick={runProductSearch}></lightning-button>
+                        </div>
+                    </div>
+
+                    <template if:true={productSearchContext}>
+                        <div class="slds-text-body_small slds-text-color_weak slds-m-bottom_x-small">
+                            {productSearchContext}
+                        </div>
+                    </template>
+                    <template if:true={productSearchMessage}>
+                        <div class="slds-notify slds-notify_alert slds-alert_warning slds-m-bottom_small" role="alert">
+                            <span>{productSearchMessage}</span>
+                        </div>
+                    </template>
+
+                    <div class="product-table-wrap">
+                        <table class="slds-table slds-table_cell-buffer slds-table_bordered">
+                            <thead>
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Product</th>
+                                    <th>List Price</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template for:each={productResults} for:item="p">
+                                    <tr key={p.pricebookEntryId}>
+                                        <td>{p.productCode}</td>
+                                        <td>{p.productName}</td>
+                                        <td>
+                                            <lightning-formatted-number
+                                                value={p.listPrice}
+                                                format-style="currency"
+                                                currency-code={p.currencyIsoCode}>
+                                            </lightning-formatted-number>
+                                        </td>
+                                        <td class="slds-text-align_right">
+                                            <lightning-button
+                                                label="Add"
+                                                variant="brand"
+                                                data-pbe={p.pricebookEntryId}
+                                                data-product={p.productId}
+                                                onclick={handleAddProductRow}>
+                                            </lightning-button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <footer class="slds-modal__footer">
+                    <lightning-button label="Cancel" onclick={closeProductPicker}></lightning-button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+</template>
